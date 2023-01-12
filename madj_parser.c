@@ -7,7 +7,7 @@
 #define ASIN_LENGTH 10
 #define MAX_LENGTH 233667
 #define MAX_LINE 9430088
-#define MAX_HASH 16777216 //2^24 > MAX_LINE
+
 
 void load_asin(char **asin_tab)
 {
@@ -15,7 +15,7 @@ void load_asin(char **asin_tab)
 	memset(buffer, 0, sizeof(char)*16);
 
 	printf("Buffer (load_asin) alloué et initialisé à zéro\n");
-	
+
 	FILE *f = fopen("id_product_list.csv", "r");
 	if(!f)
 	{
@@ -27,9 +27,6 @@ void load_asin(char **asin_tab)
 
 	for(uint64_t i = 0; i < MAX_LINE; ++i)
 	{
-		// if(i%100000==0)
-		// 	printf("%lu\n", i);
-
 		fgets(buffer, 16, f);
 		strncpy(asin_tab[i], buffer, ASIN_LENGTH+1);
 	}
@@ -40,63 +37,22 @@ void load_asin(char **asin_tab)
 	free(buffer);
 }
 
-int hash(char *str)
+void compute_hash_map(uint64_t *hash_tab, char **asin_tab)
 {
-	int a = 0x9e3779b9;
-	int b = 0x9e3779b9;
-	int c = 10;
-	
-   	a += str[0] + (str[1] << 8) + (str[2] << 16) + (str[3] << 24);
-   	b += str[4] + (str[5] << 8) + (str[6] << 16) + (str[7] << 24);
-   	c += (str[8] << 8) + (str[9] << 16);
-
-   	a -= b; a -= c; a ^= c >> 13;
-	b -= c; b -= a; b ^= a << 8;
-	c -= a; c -= b; c ^= b >> 13;
-  	a -= b; a -= c; a ^= c >> 12;
-  	b -= c; b -= a; b ^= a << 16;
-  	c -= a; c -= b; c ^= b >> 5;
- 	a -= b; a -= c; a ^= c >> 3;
-  	b -= c; b -= a; b ^= a << 10;
-  	c -= a; c -= b; c ^= b >> 15;
-
-   	return c & (MAX_HASH-1);
-}
-
-// SMLRBIMX03 -> 534D4C5242494D583033
-
-void detect_collisions(char **asin_tab)
-{
-	// FILE *fw = fopen("output_hash", "w");
-	// if(!fw)
-	// {
-	// 	perror("output_hash");
-	// 	exit(EXIT_FAILURE);
-	// }
-
-	uint64_t prev = 0;
-	uint64_t next = 0;
+	uint64_t paddr = (uint64_t) asin_tab;
 	uint64_t collide = 0;
+
 	for(uint64_t i = 0; i < MAX_LINE; i++)
 	{
-		// if(i%100000==0)
-		// 	printf("%lu\n", i);
-
-		next = hash(asin_tab[i]);
-		// fprintf(fw ,"%ld\n", next);
-		if(prev == next)
+		uint64_t addr = (uint64_t) &asin_tab[i];
+		uint64_t h = addr - paddr; // Hash Function
+		if(hash_tab[h] != 0)
 			collide++;
-		prev = next;
+		hash_tab[h] = i;
 	}
-
-	// fclose(fw);
 
 	printf("Il y a eu %ld collisions\n", collide);
 }
-
-/*
-remplacer asin_tab par le tableau de hachage, gain de place, ou pas ça peut peut-etre encore servir
-*/
 
 int main(int argc, char **argv)
 {
@@ -109,8 +65,20 @@ int main(int argc, char **argv)
 	load_asin(asin_tab);
 	printf("Tableau des id produits chargé\n");
 
-	printf("Détection de collisions de hachage...\n");
-	detect_collisions(asin_tab);
+	uint64_t hash_length = (uint64_t) &asin_tab[MAX_LINE-1] - (uint64_t) asin_tab;
+
+	uint64_t *hash_tab = aligned_alloc(ALIGN_SIZE, sizeof(uint64_t) * hash_length);
+	if(!hash_tab)
+	{
+		perror("hash_tab");
+		exit(EXIT_FAILURE);
+	}
+	memset(hash_tab, 0, sizeof(uint64_t) * hash_length);
+
+	printf("Table de hachage de taille %ld alloué\n", hash_length);
+
+	compute_hash_map(hash_tab, asin_tab);
+	printf("Table de hachage chargé\n");
 
 	// for(int i = 0; i < 100; ++i)
 	// 	printf("%s\n", asin_tab[i]);
@@ -147,15 +115,15 @@ int main(int argc, char **argv)
 
 	// free(buffer);
 	// fclose(f);
+	
+	printf("Libération de la table de hachage...\n");
+	free(hash_tab);
 
 	printf("Libération du tableau des id produits...\n");
 	for(uint64_t i = 0; i < MAX_LINE; ++i)
-	{
 		free(asin_tab[i]);
-		// if(i%1000000==0)
-		// 	printf("%ld\n", i);
-	}
 	free(asin_tab);
+
 	printf("Libéré\n");
 
 	return 0;
