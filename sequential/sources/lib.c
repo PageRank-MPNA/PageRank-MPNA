@@ -2,18 +2,13 @@
 #include <math.h>
 #include <stdio.h>
 
-typedef struct csr_vector_s
-{
-	double *val;
-	int *rows;
-	int *cols;
-	int nb;
-} csr_vector_t;
+#include "../headers/lib.h"
 
-
-void read_sparse_from_file(const char *filename, csr_vector_t *A, const int n)
+int read_sparse_from_file(const char *filename, csr_vector_t *A, const int n)
 {
 	FILE *f = fopen(filename, "r");
+	if (!f)
+		return perror("Cannot open file"), -1;
 
 	int len_val, len_rows, len_cols;
 
@@ -58,6 +53,7 @@ void read_sparse_from_file(const char *filename, csr_vector_t *A, const int n)
 	}
 
 	fclose(f);
+	return 0;
 }
 
 void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n)
@@ -156,29 +152,4 @@ double *PageRank(csr_vector_t *A, const double epsilon, const double beta, const
 	free(e);
 	free(old_x);
 	return x;
-}
-
-int main(int argc, char const *argv[])
-{
-	int n = 4;
-	double beta = 0.85;
-	double epsilon = 1e-4;
-	csr_vector_t *matrice = malloc(sizeof(csr_vector_t*));
-
-	read_sparse_from_file("sparse2.txt", matrice, n);
-
-	double *res = PageRank(matrice, epsilon, beta, n);
-
-	printf("result:\n");
-	for (int i = 0; i < n; ++i)
-		printf("%e ", res[i]);
-	printf("\n");
-
-	free(matrice->val);
-	free(matrice->rows);
-	free(matrice->cols);
-	free(matrice);
-	free(res);
-
-	return 0;
 }
