@@ -7,7 +7,7 @@ parallel:
 	cd $@ && $(MAKE)
 
 compil:
-	gcc -O2 -march=native madj_parser.c -o parse
+	g++ -O2 -march=native madj_parser.cpp -o parse
 
 parse: 
 	./parse
