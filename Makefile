@@ -11,8 +11,10 @@ compil:
 
 parse: 
 	./parse
+test_matrix:
+	gcc -o3 create_test_matrix.c -o test_matrix
 
 .PHONY: clean all parallel sequential compil parse
 
 clean:
-	rm parse
+	rm -f parse test_matrix
