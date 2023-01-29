@@ -1,12 +1,15 @@
 #include "../headers/lib.h"
+#include <mpi.h>
 
 csr_vector_t *matrice;
-int n;
+int n, argc_g;
+char **argv_g;
 double beta, epsilon;
 
 static void test_pagerank()
 {
-    double *res = PageRank(matrice, epsilon, beta, n);
+
+    double *res = PageRank_par(matrice, epsilon, beta, n, argc_g, argv_g);
 
     assert_float_equal(0.372284, res[0], 0.000001);
     assert_float_equal(0.107980, res[1], 0.000001);
@@ -14,8 +17,12 @@ static void test_pagerank()
     assert_float_equal(0.107980, res[3], 0.000001);
 }
 
-int main()
+int main(int argc, char **argv)
 {
+
+    argc_g = argc;
+    argv_g = argv;
+
     n = 4;
     beta = 0.85;
     epsilon = 1e-4;

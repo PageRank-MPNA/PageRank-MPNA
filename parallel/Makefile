@@ -1,4 +1,4 @@
-CC= gcc
+CC= mpicc
 SRC= sources/
 BIN= bin/
 
@@ -6,14 +6,14 @@ BIN= bin/
 .PHONY: clean all 
 
 run: main
-	./$(BIN)$<
+	OMP_NUM_THREADS=1 mpirun -np 2 ./$(BIN)$<
 
 main: $(SRC)lib.c
 ## 	$(CC) $< -o $(BIN)$@ -lm
-	$(CC) -g -c $< -o $(BIN)$@.o -fopenmp
-	$(CC) -g -c $(SRC)main.c -o $(BIN)$lib.o  -fopenmp
+	$(CC) -g -c $< -o $(BIN)$@.o -g
+	$(CC) -g -c $(SRC)main.c -o $(BIN)$lib.o  -g
 
-	$(CC) -o $(BIN)$@ ./$(BIN)$@.o ./$(BIN)$lib.o  -lcmocka -lm -fopenmp
+	$(CC) -o $(BIN)$@ ./$(BIN)$@.o ./$(BIN)$lib.o  -g -lcmocka -lm -fopenmp
 
 
 test:$(SRC)test.c
@@ -22,7 +22,7 @@ test:$(SRC)test.c
 	$(CC) -o $(BIN)$@ ./$(BIN)$@.o ./$(BIN)main.o -lcmocka -lm -fopenmp
 	rm -f lib.o test.o
 
-	time ./$(BIN)$@
+	OMP_NUM_THREADS=2 mpirun -np 2 ./$(BIN)$@
 
 clean: 
 	rm -f bin/*

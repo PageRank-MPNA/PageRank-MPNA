@@ -1,5 +1,6 @@
 #include "../headers/lib.h"
 #include <omp.h>
+#include <mpi.h>
 /*
 struct Matrix* to_CSB(double **A, int size, int process)
 {
@@ -112,21 +113,18 @@ void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n)
     free(tmp);
 }
 
-void mult_mat_1D_vect(const double *A, double *x, const int n)
+void mult_mat_CSR_vect_par(const csr_vector_t *A, double *x, const int n, unsigned start, unsigned end)
 {
     double *tmp = calloc(n, sizeof(double));
 
-#pragma omp parallel for
-    for (int i = 0; i < n; ++i)
+    for (int i = start; i <= end; ++i)
     {
-        for (int j = 0; j < n; ++j)
-            tmp[i] += A[i * n + j] * x[j];
+        for (int j = A->rows[i]; j < A->rows[i + 1]; ++j)
+            tmp[i] += A->val[j] * x[A->cols[j]];
     }
 
-#pragma omp parallel for
-    for (int i = 0; i < n; ++i)
+    for (int i = start; i < end; ++i)
         x[i] = tmp[i];
-
     free(tmp);
 }
 
@@ -140,6 +138,75 @@ const double norm2(const double *x, const int n)
         res += x[i] * x[i];
 
     return sqrt(res);
+}
+
+double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, const int n, int argc, char **argv)
+{
+    unsigned rank, nranks, nlocal, start, end;
+    double *x = calloc(n, sizeof(double));
+    double *old_x = calloc(n, sizeof(double));
+    double *e = calloc(n, sizeof(double));
+
+    const double frac = 1.0 / (double)n;
+    const double cst = (1 - beta) * frac;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+    for (int j = 0; j < n; ++j)
+    {
+        x[j] = frac;
+        old_x[j] = frac;
+        e[j] = cst;
+    }
+    nlocal = n / nranks;
+
+    start = rank * nlocal;
+    end = start + nlocal;
+
+    if (rank == n - 1)
+        end = n;
+
+    unsigned loop = 1;
+
+    while (loop)
+    {
+        mult_mat_CSR_vect_par(A, x, n, start, end);
+
+        if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, x, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
+            printf("Erreur all gather \n");
+
+        double norm1 = 0.0;
+        for (int j = 0; j < n; ++j)
+        {
+            const double val = beta * x[j] + e[j];
+            x[j] = val;
+            // Reduce the x vector
+            norm1 += val;
+        }
+        for (int j = 0; j < n; ++j)
+        {
+            // Normalize x
+            x[j] = x[j] / norm1;
+            // Test break value
+            old_x[j] = x[j] - old_x[j];
+        }
+
+        if (norm2(old_x, n) < epsilon)
+            loop = 0;
+        for (int j = 0; j < n; ++j)
+            old_x[j] = x[j];
+
+        if (MPI_Allreduce(MPI_IN_PLACE, &loop, 1, MPI_UNSIGNED, MPI_MIN, MPI_COMM_WORLD) != MPI_SUCCESS)
+            printf("Error all reduce \n");
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (rank == 0)
+        MPI_Finalize();
+
+    return x;
 }
 
 double *PageRank(csr_vector_t *A, const double epsilon, const double beta, const int n)

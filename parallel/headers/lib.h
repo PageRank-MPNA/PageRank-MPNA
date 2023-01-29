@@ -7,27 +7,30 @@
 #include <math.h>
 #include <cmocka.h>
 
-struct CSB{
+#define MAX_ITERATIONS 100000
+struct CSB
+{
     float *data;
     int *rowind;
     int *coldind;
     struct CSB *next;
 };
 
-struct Matrix{
+struct Matrix
+{
     struct CSB *first;
     int size_block;
 };
 
 typedef struct csr_vector_s
 {
-	double *val;
-	int *rows;
-	int *cols;
-	int nb;
+    double *val;
+    int *rows;
+    int *cols;
+    int nb;
 } csr_vector_t;
 
-struct Matrix* to_CSB(double **A, int size, int process);
+struct Matrix *to_CSB(double **A, int size, int process);
 
 int read_sparse_from_file(const char *filename, csr_vector_t *A, const int n);
 
@@ -39,6 +42,4 @@ const double norm2(const double *x, const int n);
 
 double *PageRank(csr_vector_t *A, const double epsilon, const double beta, const int n);
 
-
-
-
+double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, const int n, int argc, char **argv);
