@@ -116,13 +116,13 @@ void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n)
 void mult_mat_CSR_vect_par(const csr_vector_t *A, double *x, const int n, unsigned start, unsigned end)
 {
     double *tmp = calloc(n, sizeof(double));
-
+#pragma omp parallel for
     for (int i = start; i <= end; ++i)
     {
         for (int j = A->rows[i]; j < A->rows[i + 1]; ++j)
             tmp[i] += A->val[j] * x[A->cols[j]];
     }
-
+#pragma omp parallel for
     for (int i = start; i < end; ++i)
         x[i] = tmp[i];
     free(tmp);
@@ -149,10 +149,14 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, c
 
     const double frac = 1.0 / (double)n;
     const double cst = (1 - beta) * frac;
+    int provided;
 
+    // MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nranks);
+
+#pragma omp parallel for
     for (int j = 0; j < n; ++j)
     {
         x[j] = frac;
@@ -177,6 +181,9 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, c
             printf("Erreur all gather \n");
 
         double norm1 = 0.0;
+
+#pragma omp parallel for reduction(+ \
+                                   : norm1)
         for (int j = 0; j < n; ++j)
         {
             const double val = beta * x[j] + e[j];
@@ -184,6 +191,8 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, c
             // Reduce the x vector
             norm1 += val;
         }
+
+#pragma omp parallel for
         for (int j = 0; j < n; ++j)
         {
             // Normalize x
@@ -194,6 +203,8 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, c
 
         if (norm2(old_x, n) < epsilon)
             loop = 0;
+
+#pragma omp parallel for
         for (int j = 0; j < n; ++j)
             old_x[j] = x[j];
 
@@ -206,6 +217,8 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, c
     if (rank == 0)
         MPI_Finalize();
 
+    free(e);
+    free(old_x);
     return x;
 }
 
