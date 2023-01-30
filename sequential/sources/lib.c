@@ -4,7 +4,7 @@
 
 #include "../headers/lib.h"
 
-int read_sparse_from_file(const char *filename, csr_vector_t *A, const int n)
+int read_sparse_from_file(const char *filename, csr_vector_t *A)
 {
 	FILE *f = fopen(filename, "r");
 	if (!f)
@@ -56,15 +56,15 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A, const int n)
 	return 0;
 }
 
-void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n)
+void mult_mat_CSR_vect(const csr_vector_t *A, double *x)
 {
+	int n = A->nb;
 	double *tmp = calloc(n, sizeof(double));
 
-	for (int i = 0; i <= A->nb; ++i)
+	for (int i = 0; i <= n; ++i)
 	{
 		for (int j = A->rows[i]; j < A->rows[i+1]; ++j)
 			tmp[i] += A->val[j] * x[A->cols[j]];
-
 	}
 
 	for (int i = 0; i < n; ++i)
@@ -99,9 +99,9 @@ const double norm2(const double *x, const int n)
 	return sqrt(res);
 }
 
-double *PageRank(csr_vector_t *A, const double epsilon, const double beta, const int n)
+double *PageRank(csr_vector_t *A, const double epsilon, const double beta)
 {
-	int i = 0;
+	int i = 0, n = A->nb;
 	double *x     = calloc(n, sizeof(double));
 	double *old_x = calloc(n, sizeof(double));
 	double *e     = calloc(n, sizeof(double));
@@ -123,7 +123,7 @@ double *PageRank(csr_vector_t *A, const double epsilon, const double beta, const
     	i++;
 
 		// Compute multiplication matrix-vector
-		mult_mat_CSR_vect(A, x, n);
+		mult_mat_CSR_vect(A, x);
 
 		// Compute teleportations
 		double norm1 = 0.0;

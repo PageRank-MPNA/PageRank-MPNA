@@ -6,18 +6,17 @@
 
 int main(int argc, char const *argv[])
 {
-	int n = 4;
 	double beta = 0.85;
 	double epsilon = 1e-4;
-	csr_vector_t *matrice = malloc(sizeof(csr_vector_t*));
+	csr_vector_t *matrice = malloc(sizeof(csr_vector_t));
 
-	if(read_sparse_from_file("data/sparse2.txt", matrice, n) == -1)
+	if(read_sparse_from_file("data/sparse2.txt", matrice) == -1)
 		return 1;
 
-	double *res = PageRank(matrice, epsilon, beta, n);
+	double *res = PageRank(matrice, epsilon, beta);
 
 	printf("result:\n");
-	for (int i = 0; i < n; ++i)
+	for (int i = 0; i < matrice->nb; ++i)
 		printf("%e ", res[i]);
 	printf("\n");
 
