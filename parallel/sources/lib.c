@@ -41,7 +41,7 @@ int main()
 
 }*/
 
-int read_sparse_from_file(const char *filename, csr_vector_t *A, const int n)
+int read_sparse_from_file(const char *filename, csr_vector_t *A)
 {
     FILE *f = fopen(filename, "r");
     if (f == NULL)
@@ -140,8 +140,10 @@ const double norm2(const double *x, const int n)
     return sqrt(res);
 }
 
-double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, const int n, int argc, char **argv)
+double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, int argc, char **argv)
 {
+    int i = 0, n = A->nb;
+
     unsigned rank, nranks, nlocal, start, end;
     double *x = calloc(n, sizeof(double));
     double *old_x = calloc(n, sizeof(double));
@@ -214,16 +216,17 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, c
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    if (rank == 0)
-        MPI_Finalize();
+
 
     free(e);
     free(old_x);
     return x;
 }
 
-double *PageRank(csr_vector_t *A, const double epsilon, const double beta, const int n)
+double *PageRank(csr_vector_t *A, const double epsilon, const double beta)
 {
+    int n = A->nb;
+
     int i = 0;
     double *x = calloc(n, sizeof(double));
     double *old_x = calloc(n, sizeof(double));

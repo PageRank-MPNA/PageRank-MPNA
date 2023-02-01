@@ -32,7 +32,7 @@ typedef struct csr_vector_s
 
 struct Matrix *to_CSB(double **A, int size, int process);
 
-int read_sparse_from_file(const char *filename, csr_vector_t *A, const int n);
+int read_sparse_from_file(const char *filename, csr_vector_t *A);
 
 void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n);
 
@@ -40,6 +40,7 @@ void mult_mat_1D_vect(const double *A, double *x, const int n);
 
 const double norm2(const double *x, const int n);
 
-double *PageRank(csr_vector_t *A, const double epsilon, const double beta, const int n);
+double *PageRank(csr_vector_t *A, const double epsilon, const double beta);
 
-double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, const int n, int argc, char **argv);
+double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, int argc, char **argv);
+void mult_mat_CSR_vect_par(const csr_vector_t *A, double *x, const int n, unsigned start, unsigned end);
