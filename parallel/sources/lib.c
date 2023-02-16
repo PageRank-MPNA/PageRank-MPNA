@@ -1,45 +1,6 @@
 #include "../headers/lib.h"
 #include <omp.h>
 #include <mpi.h>
-/*
-struct Matrix* to_CSB(double **A, int size, int process)
-{
-    struct Matrix* matrix = malloc(sizeof(matrix));
-
-    (size%process) ? matrix->size_block = sqrt(size) : matrix->size_block = process;
-
-    int row = 1;
-
-    struct CSB* block = malloc(sizeof(block));
-
-    matrix->first = block;
-
-    for(int i = 0; i < size; i ++)
-    {
-        for(int j = 0; j < size ; j ++)
-        {
-            if(A[i][j])
-            {
-               if(!row)
-               {
-                    struct CSB* block_next = malloc(sizeof(block));
-                    block->next = block_next;
-               }
-
-            }
-        }
-    }
-
-
-    return matrix;
-}
-
-*/
-/*
-int main()
-{
-
-}*/
 
 int read_sparse_from_file(const char *filename, csr_vector_t *A)
 {
@@ -55,43 +16,33 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A)
     A->rows = malloc(sizeof(double) * len_rows);
     A->cols = malloc(sizeof(double) * len_cols);
 
-    fseek(f, sizeof(int) + 1, SEEK_SET);
+    // fseek(f, sizeof(int) + 1, SEEK_SET);
 
-    int i = 0, j = 0;
+    int j = 0;
     double value;
-    while (fscanf(f, "%lf ", &value) != EOF)
+    for (int i = 0; i < (len_val); i++)
     {
-        if (i < len_val)
-        {
-            A->val[j] = value;
-            if (j == len_val - 1)
-            {
-                fscanf(f, "\n");
-                j = 0;
-            }
-            else
-                j++;
-        }
-        else if (i < len_val + len_rows)
-        {
-            A->rows[j] = (int)value;
-            if (j == len_rows - 1)
-            {
-                fscanf(f, "\n");
-                j = 0;
-            }
-            else
-                j++;
-        }
-        else
-        {
-            A->cols[j] = (int)value;
-            j++;
-        }
-        i++;
+        fscanf(f, "%lf ", &value);
+        A->val[i] = value;
+    }
+    fscanf(f, "\n", &value);
+
+    for (int i = 0; i < len_rows; i++)
+    {
+        fscanf(f, "%d ", &j);
+
+        A->rows[i] = j;
+    }
+    fscanf(f, "\n", &value);
+
+    for (int i = 0; i < len_cols; i++)
+    {
+        fscanf(f, "%d ", &j);
+
+        A->cols[i] = j;
     }
 
-    // fclose(f);
+    fclose(f);
 
     return 0;
 }
@@ -101,7 +52,7 @@ void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n)
     double *tmp = calloc(n, sizeof(double));
 
 #pragma omp parallel for
-    for (int i = 0; i <= A->nb; ++i)
+    for (int i = 0; i < A->nb; ++i)
     {
         for (int j = A->rows[i]; j < A->rows[i + 1]; ++j)
             tmp[i] += A->val[j] * x[A->cols[j]];
@@ -117,9 +68,9 @@ void mult_mat_CSR_vect_par(const csr_vector_t *A, double *x, const int n, unsign
 {
     double *tmp = calloc(n, sizeof(double));
 #pragma omp parallel for
-    for (int i = start; i <= end; ++i)
+    for (int i = start; i < end; ++i)
     {
-        for (int j = A->rows[i]; j < A->rows[i + 1]; ++j)
+        for (int j = A->rows[i]; (j < A->rows[i + 1]) && (j < end); ++j)
             tmp[i] += A->val[j] * x[A->cols[j]];
     }
 #pragma omp parallel for
@@ -154,7 +105,6 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
     int provided;
 
     // MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-    MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nranks);
 
@@ -179,14 +129,11 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
     {
         mult_mat_CSR_vect_par(A, x, n, start, end);
 
-        if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, x, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
-            printf("Erreur all gather \n");
-
         double norm1 = 0.0;
 
 #pragma omp parallel for reduction(+ \
                                    : norm1)
-        for (int j = 0; j < n; ++j)
+        for (int j = start; j < end; ++j)
         {
             const double val = beta * x[j] + e[j];
             x[j] = val;
@@ -194,8 +141,14 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
             norm1 += val;
         }
 
+        double global;
+
+        MPI_Allreduce(&norm1, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+        norm1 = global;
+
 #pragma omp parallel for
-        for (int j = 0; j < n; ++j)
+        for (int j = start; j < end; ++j)
         {
             // Normalize x
             x[j] = x[j] / norm1;
@@ -203,11 +156,16 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
             old_x[j] = x[j] - old_x[j];
         }
 
+        if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, old_x, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
+            printf("Erreur all gather \n");
+        if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, x, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
+            printf("Erreur all gather \n");
+
         if (norm2(old_x, n) < epsilon)
             loop = 0;
 
 #pragma omp parallel for
-        for (int j = 0; j < n; ++j)
+        for (int j = start; j < end; ++j)
             old_x[j] = x[j];
 
         if (MPI_Allreduce(MPI_IN_PLACE, &loop, 1, MPI_UNSIGNED, MPI_MIN, MPI_COMM_WORLD) != MPI_SUCCESS)
@@ -215,8 +173,6 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-
-
 
     free(e);
     free(old_x);
