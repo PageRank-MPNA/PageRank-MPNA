@@ -19,9 +19,9 @@ bench: $(SRC)bench.c
 main: $(SRC)lib.c
 ## 	$(CC) $< -o $(BIN)$@ -lm
 	$(CC) -g -c $< -o $(BIN)$@.o -g -fopenmp
-	$(CC) -g -c $(SRC)main.c -o $(BIN)$lib.o  -g -fopenmp
+	$(CC) -g -c $(SRC)main.c -o $(BIN)lib.o  -g -fopenmp
 
-	$(CC) -o $(BIN)$@ ./$(BIN)$@.o ./$(BIN)$lib.o  -g -lm -fopenmp
+	$(CC) -o $(BIN)$@ ./$(BIN)$@.o ./$(BIN)lib.o  -g -lm -fopenmp
 
 
 test:$(SRC)test.c

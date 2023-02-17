@@ -9,7 +9,7 @@ parallel:
 compil:
 	g++ -O2 -march=native madj_parser.cpp -o parse
 
-parse: 
+parse: compil
 	./parse
 test_matrix:
 	gcc -o3 create_test_matrix.c -o test_matrix
