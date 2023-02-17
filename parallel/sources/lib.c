@@ -20,7 +20,7 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A)
 
     int j = 0;
     double value;
-    for (int i = 0; i < (len_val); i++)
+    for (int i = 0; i < len_val; i++)
     {
         fscanf(f, "%lf ", &value);
         A->val[i] = value;
@@ -72,7 +72,7 @@ void mult_mat_CSR_vect_par(const csr_vector_t *A, double *x, const int n, unsign
     for (int i = start; i < end; ++i)
     {
         sum = 0.0;
-        for (int j = A->rows[i]; j < A->rows[i + 1] ; ++j)
+        for (int j = A->rows[i]; j < A->rows[i + 1] && j < n; ++j)
             sum += A->val[j] * x[A->cols[j]];
         x[i] = sum;
     }
@@ -101,9 +101,7 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
 
     const double frac = 1.0 / (double)n;
     const double cst = (1 - beta) * frac;
-    int provided;
 
-    // MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nranks);
 
@@ -114,8 +112,11 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
         old_x[j] = frac;
         e[j] = cst;
     }
+
+    // How many every rank will compute
     nlocal = n / nranks;
 
+    // Range to start and end
     start = rank * nlocal;
     end = start + nlocal;
 
@@ -126,8 +127,11 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
 
     while (loop)
     {
+        // Compute multiplication matrix-vector
+
         mult_mat_CSR_vect_par(A, x, n, start, end);
 
+        // Compute teleportation
         double norm1 = 0.0;
 
 #pragma omp parallel for reduction(+ \
@@ -142,6 +146,7 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
 
         double global;
 
+        // Sum the local norm
         MPI_Allreduce(&norm1, &global, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         norm1 = global;
@@ -155,6 +160,7 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
             old_x[j] = x[j] - old_x[j];
         }
 
+        // Send local part of the x and old_x vector
         if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, old_x, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
             printf("Erreur all gather \n");
         if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, x, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
@@ -167,6 +173,7 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
         for (int j = start; j < end; ++j)
             old_x[j] = x[j];
 
+        // Send the loop state, it should be the same for everyone
         if (MPI_Allreduce(MPI_IN_PLACE, &loop, 1, MPI_UNSIGNED, MPI_MIN, MPI_COMM_WORLD) != MPI_SUCCESS)
             printf("Error all reduce \n");
     }

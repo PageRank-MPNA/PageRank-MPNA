@@ -100,8 +100,6 @@ static void test_pagerank()
 int main(int argc, char **argv)
 {
 
-    MPI_Init(&argc, &argv);
-
     argc_g = argc;
     argv_g = argv;
 
@@ -110,6 +108,8 @@ int main(int argc, char **argv)
     matrice = malloc(sizeof(csr_vector_t));
 
     read_sparse_from_file("./data/sparse2.txt", matrice);
+
+    MPI_Init(&argc, &argv);
 
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_pagerank),
