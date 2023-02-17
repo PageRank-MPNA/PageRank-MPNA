@@ -10,7 +10,7 @@ int main(int argc, char const *argv[])
 	double epsilon = 1e-4;
 	csr_vector_t *matrice = malloc(sizeof(csr_vector_t));
 
-	if(read_sparse_from_file("data/sparse2.txt", matrice) == -1)
+	if(read_sparse_from_file("../test_matrix.csr", matrice) == -1)
 		return 1;
 
 	double *res = PageRank(matrice, epsilon, beta);

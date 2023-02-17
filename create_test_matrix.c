@@ -2,30 +2,79 @@
 #include <stdlib.h>
 #include <time.h>
 
-int nnz = 0;
-int row = 0;
-int col = 0;
+int nnz = 0; // taille = nombre de valeurs non-nulles
+int row = 0; // taille = nombre de ligne de la matrice dense + 1
+int col = 0; // taille = nombre de valeurs non-nulles
+
+// Pour qsort()
+int intComparator(const void *first, const void *second)
+{
+    int firstInt = * (const int *) first;
+    int secondInt = * (const int *) second;
+    return firstInt - secondInt;
+}
 
 void create_matrix(int *I, int *J, double *val)
 {
-    int n = 0;
-    while (n < nnz)
+    // int n = 0;
+    // while (n < nnz)
+    // {
+    //     int i = rand() % row;
+    //     int j = rand() % col;
+    //     double v = (double)rand() / (double)(RAND_MAX);
+    //     int k;
+    //     for (k = 0; k < n; k++)
+    //         if (I[k] == i && J[k] == j)
+    //             break;
+    //     if (k == n)
+    //     {
+    //         I[n] = i;
+    //         J[n] = j;
+    //         val[n] = v;
+    //         n++;
+    //     }
+    // }
+
+    for(int i = 0; i < nnz; ++i)
     {
-        int i = rand() % row;
-        int j = rand() % col;
-        double v = (double)rand() / (double)(RAND_MAX);
-        int k;
-        for (k = 0; k < n; k++)
-            if (I[k] == i && J[k] == j)
-                break;
-        if (k == n)
+        val[i] = 1;
+        J[i] = rand() % row;
+    }
+
+    I[0] = 0;
+    for(int i = 1; i < row + 1; ++i)
+    {
+        I[i] = rand() % (nnz);
+    }
+    I[row] = nnz;
+
+    qsort(I, row, sizeof(int), intComparator);
+
+    int *temp = malloc(sizeof(int) * nnz);
+    for(int i = 0; i < row; ++i)
+    {
+        const int ecart = I[i+1] - I[i];
+        if(ecart)
         {
-            I[n] = i;
-            J[n] = j;
-            val[n] = v;
-            n++;
+            for(int j = I[i]; j < I[i+1]; ++j)
+                temp[j - I[i]] = J[j];
+
+            for(int i = 0; i < ecart; ++i)
+                for(int j = i+1; j < ecart; ++j)
+                    if(temp[i] == temp[j])
+                        temp[j] = (temp[j]+1)%ecart;
+
+            qsort(temp, ecart, sizeof(int), intComparator);
+
+            for(int j = I[i]; j < I[i+1]; ++j)
+            {
+                J[j] = temp[j - I[i]];
+                val[j] /= ecart;
+            }
         }
     }
+    free(temp);
+
 }
 
 int main(int argc, char **argv)
@@ -45,7 +94,7 @@ int main(int argc, char **argv)
     }
     srand(time(NULL));
 
-    int *I = (int *)malloc(nnz * sizeof(int));
+    int *I = (int *)malloc((row+1) * sizeof(int));
     int *J = (int *)malloc(nnz * sizeof(int));
     double *val = (double *)malloc(nnz * sizeof(double));
 
@@ -66,7 +115,7 @@ int main(int argc, char **argv)
     }
     fprintf(fp, "\n");
 
-    for (int i = 0; i < nnz; i++)
+    for (int i = 0; i < row+1; i++)
     {
         fprintf(fp, "%d ", I[i]);
     }

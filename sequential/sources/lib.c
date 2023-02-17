@@ -9,38 +9,24 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A)
     FILE *f = fopen(filename, "r");
     if (f == NULL)
         return perror("Failed: "), -1;
-    int len_val, len_rows, len_cols;
 
-    fscanf(f, "%d %d %d\n", &len_val, &len_rows, &len_cols);
+    int buf;
+    fscanf(f, "%d %d %d\n", &(A->nb), &(A->dim), &buf);
 
-    A->nb = len_val;
-    A->val = malloc(sizeof(double) * len_val);
-    A->rows = malloc(sizeof(double) * len_rows);
-    A->cols = malloc(sizeof(double) * len_cols);
+    A->val = malloc(sizeof(double) * A->nb);
+    A->rows = malloc(sizeof(int) * (A->dim+1));
+    A->cols = malloc(sizeof(int) * A->nb);
 
-    int j = 0;
-    double value;
-    for (int i = 0; i < (len_val); i++)
-    {
-        fscanf(f, "%lf ", &value);
-        A->val[i] = value;
-    }
-    fscanf(f, "\n", &value);
+    for (int i = 0; i < A->nb; i++)
+        fscanf(f, "%lf ", &(A->val[i]));
+    fscanf(f, "\n", &buf);
 
-    for (int i = 0; i < len_rows; i++)
-    {
-        fscanf(f, "%d ", &j);
+    for (int i = 0; i < A->dim+1; i++)
+        fscanf(f, "%d ", &(A->rows[i]));
+    fscanf(f, "\n", &buf);
 
-        A->rows[i] = j;
-    }
-    fscanf(f, "\n", &value);
-
-    for (int i = 0; i < len_cols; i++)
-    {
-        fscanf(f, "%d ", &j);
-
-        A->cols[i] = j;
-    }
+    for (int i = 0; i < A->nb; i++)
+        fscanf(f, "%d ", &(A->cols[i]));
 
     fclose(f);
 
@@ -49,16 +35,17 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A)
 
 void mult_mat_CSR_vect(const csr_vector_t *A, double *x)
 {
-	int n = A->nb;
-	double sum;
+	int n = A->dim;
+	double *tmp = calloc(n, sizeof(double));
 
 	for (int i = 0; i < n; ++i)
-	{
-		sum = 0.0;
 		for (int j = A->rows[i]; j < A->rows[i+1]; ++j)
-			sum += A->val[j] * x[A->cols[j]];
-		x[i] = sum;
-	}
+			tmp[i] += A->val[j] * x[A->cols[j]];
+
+	for(int i = 0; i < n; ++i)
+		x[i] = tmp[i];
+
+	free(tmp);
 }
 
 void mult_mat_1D_vect(const double *A, double *x, const int n)
@@ -90,7 +77,7 @@ const double norm2(const double *x, const int n)
 
 double *PageRank(csr_vector_t *A, const double epsilon, const double beta)
 {
-	int i = 0, n = A->nb;
+	int i = 0, n = A->dim;
 	double *x     = calloc(n, sizeof(double));
 	double *old_x = calloc(n, sizeof(double));
 	double *e     = calloc(n, sizeof(double));
@@ -110,9 +97,11 @@ double *PageRank(csr_vector_t *A, const double epsilon, const double beta)
 	while(loop)
 	{
     	i++;
-
 		// Compute multiplication matrix-vector
 		mult_mat_CSR_vect(A, x);
+		// for (int i = 0; i < n; ++i)
+		// 	printf("%lf ", x[i]);
+		// printf("\n");
 
 		// Compute teleportations
 		double norm1 = 0.0;
@@ -136,6 +125,8 @@ double *PageRank(csr_vector_t *A, const double epsilon, const double beta)
 		// Keep x vector
     	for (int j = 0; j < n; ++j)
 			old_x[j] = x[j];
+
+		// loop = 0;
 	}
 
 	free(e);

@@ -6,6 +6,7 @@ typedef struct csr_vector_s
 	int *rows;
 	int *cols;
 	int nb;			// number of non-zeros
+	int dim;		// matrix dimension
 } csr_vector_t;
 
 int read_sparse_from_file(const char *filename, csr_vector_t *A);
