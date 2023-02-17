@@ -20,8 +20,8 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		name_file = (char *)malloc(sizeof(char) * strlen("data/sparse2.txt") + 1);
-		strcpy(name_file, "data/sparse2.txt");
+		name_file = (char *)malloc(sizeof(char) * strlen("../test_matrix.csr") + 1);
+		strcpy(name_file, "../test_matrix.csr");
 	}
 
 	printf("Name = %s\n", name_file);
@@ -30,14 +30,17 @@ int main(int argc, char **argv)
 	double epsilon = 1e-4;
 	csr_vector_t *matrice = malloc(sizeof(csr_vector_t));
 
+	MPI_Init(&argc, &argv);
+
 	if (read_sparse_from_file(name_file, matrice) == -1)
 		return 1;
 
 	double *res = PageRank_par(matrice, epsilon, beta, argc, argv);
+	// double *res = PageRank(matrice, epsilon, beta);
 	MPI_Finalize();
 
 	printf("result:\n");
-	for (int i = 0; i < 6; ++i)
+	for (int i = 0; i < 10; ++i)
 		printf("%e ", res[i]);
 	printf("\n");
 

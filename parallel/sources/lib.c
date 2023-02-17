@@ -7,40 +7,24 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A)
     FILE *f = fopen(filename, "r");
     if (f == NULL)
         return perror("Failed: "), -1;
-    int len_val, len_rows, len_cols;
 
-    fscanf(f, "%d %d %d\n", &len_val, &len_rows, &len_cols);
+    int buf;
+    fscanf(f, "%d %d %d\n", &(A->nb), &(A->dim), &buf);
 
-    A->nb = len_val;
-    A->val = malloc(sizeof(double) * len_val);
-    A->rows = malloc(sizeof(double) * len_rows);
-    A->cols = malloc(sizeof(double) * len_cols);
+    A->val = malloc(sizeof(double) * A->nb);
+    A->rows = malloc(sizeof(int) * (A->dim+1));
+    A->cols = malloc(sizeof(int) * A->nb);
 
-    // fseek(f, sizeof(int) + 1, SEEK_SET);
+    for (int i = 0; i < A->nb; i++)
+        fscanf(f, "%lf ", &(A->val[i]));
+    fscanf(f, "\n", &buf);
 
-    int j = 0;
-    double value;
-    for (int i = 0; i < len_val; i++)
-    {
-        fscanf(f, "%lf ", &value);
-        A->val[i] = value;
-    }
-    fscanf(f, "\n", &value);
+    for (int i = 0; i < A->dim+1; i++)
+        fscanf(f, "%d ", &(A->rows[i]));
+    fscanf(f, "\n", &buf);
 
-    for (int i = 0; i < len_rows; i++)
-    {
-        fscanf(f, "%d ", &j);
-
-        A->rows[i] = j;
-    }
-    fscanf(f, "\n", &value);
-
-    for (int i = 0; i < len_cols; i++)
-    {
-        fscanf(f, "%d ", &j);
-
-        A->cols[i] = j;
-    }
+    for (int i = 0; i < A->nb; i++)
+        fscanf(f, "%d ", &(A->cols[i]));
 
     fclose(f);
 
@@ -52,11 +36,9 @@ void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n)
     double *tmp = calloc(n, sizeof(double));
 
 #pragma omp parallel for
-    for (int i = 0; i < A->nb; ++i)
-    {
+    for (int i = 0; i < n; ++i)
         for (int j = A->rows[i]; j < A->rows[i + 1]; ++j)
             tmp[i] += A->val[j] * x[A->cols[j]];
-    }
 
 #pragma omp parallel for
     for (int i = 0; i < n; ++i)
@@ -66,16 +48,17 @@ void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n)
 
 void mult_mat_CSR_vect_par(const csr_vector_t *A, double *x, const int n, unsigned start, unsigned end)
 {
-    double sum;
+    double *tmp = calloc(end-start, sizeof(double));
 
 #pragma omp parallel for
     for (int i = start; i < end; ++i)
-    {
-        sum = 0.0;
         for (int j = A->rows[i]; j < A->rows[i + 1] && j < n; ++j)
-            sum += A->val[j] * x[A->cols[j]];
-        x[i] = sum;
-    }
+            tmp[i - start] += A->val[j] * x[A->cols[j]];
+
+#pragma omp parallel for
+    for (int i = start; i < end; ++i)
+        x[i] = tmp[i-start];
+    free(tmp);
 }
 
 const double norm2(const double *x, const int n)
@@ -92,7 +75,7 @@ const double norm2(const double *x, const int n)
 
 double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, int argc, char **argv)
 {
-    int i = 0, n = A->nb;
+    int i = 0, n = A->dim;
 
     unsigned rank, nranks, nlocal, start, end;
     double *x = calloc(n, sizeof(double));
@@ -187,7 +170,7 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
 
 double *PageRank(csr_vector_t *A, const double epsilon, const double beta)
 {
-    int n = A->nb;
+    int n = A->dim;
 
     int i = 0;
     double *x = calloc(n, sizeof(double));

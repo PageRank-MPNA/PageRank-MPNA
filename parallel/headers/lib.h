@@ -15,6 +15,7 @@ typedef struct csr_vector_s
     int *rows;
     int *cols;
     int nb;
+    int dim;
 } csr_vector_t;
 
 
