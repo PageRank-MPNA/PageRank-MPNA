@@ -1,37 +1,12 @@
 #include <iostream>
-#include <unordered_map>
-#include <map>
 #include <fstream>
 #include <string>
 #include <vector>
+#include <set>
 #include <cstring>
 #include <time.h>
 
-#define ALIGN_SIZE 512
-#define ASIN_LENGTH 10
-#define MAX_LENGTH 233667
 #define MAX_LINE 9430088
-#define MAX_HASH 16777216
-
-void load_asin(std::unordered_map<std::string, uint64_t> &hash_map)
-{
-	std::string buffer{};
-
-	std::ifstream f("id_product_list.csv");
-	if(!f.is_open())
-	{
-		perror("id_product_list.csv");
-		exit(EXIT_FAILURE);
-	}
-
-	for(uint64_t i = 0; i < MAX_LINE; ++i)
-	{
-		std::getline(f, buffer);
-		hash_map[buffer] = i;
-	}
-
-	f.close();
-}
 
 double elapsed(struct timespec &start, struct timespec &stop)
 {
@@ -40,77 +15,85 @@ double elapsed(struct timespec &start, struct timespec &stop)
 
 int main(int argc, char **argv)
 {
-	struct timespec global_start, global_stop;
 	struct timespec local_start, local_stop;
 
-	std::unordered_map<std::string, uint64_t> hash_map;
 	std::string buffer;
-	std::string id;
+	std::vector<int> line_vec;
+	line_vec.push_back(0);
+	auto temp = 0;
 
-	char seps[] = " :,[]{\"";
-	long j = 0;
+	char seps[] = " \n";
 
-	clock_gettime(CLOCK_MONOTONIC_RAW, &global_start);
-
-	clock_gettime(CLOCK_MONOTONIC_RAW, &local_start);
-	load_asin(hash_map);
-	clock_gettime(CLOCK_MONOTONIC_RAW, &local_stop);
-	std::cout << "Compute hash table : 	  " << elapsed(local_start, local_stop) << " secondes\n" << std::endl;
-
-	std::ifstream datafile("correct_metadata.json");
+	std::ifstream datafile("also_bought_col.txt");
     if(!datafile.is_open())
     {
-        perror("correct_metadata.json");
+        perror("also_bought_col.txt");
+		exit(EXIT_FAILURE);
+    }
+
+    std::ofstream csr_col("csr_col.txt");
+    if(!csr_col.is_open())
+    {
+        perror("csr_col.txt");
+		exit(EXIT_FAILURE);
+    }
+
+    std::ofstream csr_line("csr_line.txt");
+    if(!csr_line.is_open())
+    {
+        perror("csr_line.txt");
 		exit(EXIT_FAILURE);
     }
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &local_start);
-	for(uint64_t i = 0; i < MAX_LINE; ++i)
+	for(int i = 0; i < MAX_LINE; ++i)
 	{
-		if(i%100000==0)
-			std::cout << i << std::endl;
-		
+		// if(i%100000==0)
+		// 	std::cout << i << std::endl;
+
+		std::set<int> col_set;
+		auto first = 1;
 		std::getline(datafile, buffer);
 
-		std::map<long, long> col;
-        std::size_t pos = buffer.find("\"related\": {");
-        if(pos != buffer.npos)
+		char *token = strtok(&buffer[0], seps);
+        while(token != NULL)
         {
-	        pos += 12;
+        	std::string tok{token};
 
-	        std::string str{buffer.substr(pos, buffer.npos)};
-	        char *token = strtok(&str[0], seps);
-	        while(token != NULL)
-	        {
-	        	std::string tok{token};
-	        	if(!tok.compare(0, 1, "}"))
-	        		break;
+        	if(!first)
+        	{
+        		col_set.insert(std::stoi(tok));
+        	}
+        	
+        	token = strtok(NULL, seps);
 
-	        	if(tok.compare(0, 11, "also_bought") && tok.compare(0, 11, "also_viewed") && tok.compare(0, 17, "buy_after_viewing") && tok.compare(0, 15, "bought_together"))
-	    		{
-	    			j = hash_map[tok];
-	    			if(j)
-	    				col[j] = 1;
-	    		}
-
-	        	token = strtok(NULL, seps);
-	        }
-
-	        // for(auto const &pair : col)
-	        // 	std::cout << pair.first << " ";
-	    	// std::cout << std::endl;
+        	first = 0;
         }
+
+        for(auto it : col_set)
+	        csr_col << it << "\n";
+
+        line_vec.push_back(col_set.size());
+		
+		// for(auto j : col_set)
+		// 	std::cout << j << " ";
+		// putchar('\n');        
 	}
+
+	for(auto it = 0; it < line_vec.size(); ++it)
+	{
+		temp += line_vec[it];
+		csr_line << temp << "\n";
+	}
+
+	std::cout << temp << " " << line_vec.size() << " " << temp << std::endl;
+
 	clock_gettime(CLOCK_MONOTONIC_RAW, &local_stop);
-	std::cout << "Read and store in buffer : 	  " << elapsed(local_start, local_stop) << " secondes\n" << std::endl;
+	std::cout << "COmpute and write in files : 	  " << elapsed(local_start, local_stop) << " secondes\n" << std::endl;
 
+	csr_line.close();
+	csr_col.close();
 	datafile.close();
-
-    clock_gettime(CLOCK_MONOTONIC_RAW, &global_stop);
-
-	std::cout << "------------------------------------------" << std::endl;
-	std::cout << "Total elapsed time : 		  " << elapsed(global_start, global_stop) << " secondes\n\n" << std::endl;
-
 
 	return 0;
 }
