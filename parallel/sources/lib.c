@@ -66,17 +66,16 @@ void mult_mat_CSR_vect(const csr_vector_t *A, double *x, const int n)
 
 void mult_mat_CSR_vect_par(const csr_vector_t *A, double *x, const int n, unsigned start, unsigned end)
 {
-    double *tmp = calloc(n, sizeof(double));
+    double sum;
+
 #pragma omp parallel for
     for (int i = start; i < end; ++i)
     {
-        for (int j = A->rows[i]; (j < A->rows[i + 1]) && (j < end); ++j)
-            tmp[i] += A->val[j] * x[A->cols[j]];
+        sum = 0.0;
+        for (int j = A->rows[i]; j < A->rows[i + 1] ; ++j)
+            sum += A->val[j] * x[A->cols[j]];
+        x[i] = sum;
     }
-#pragma omp parallel for
-    for (int i = start; i < end; ++i)
-        x[i] = tmp[i];
-    free(tmp);
 }
 
 const double norm2(const double *x, const int n)

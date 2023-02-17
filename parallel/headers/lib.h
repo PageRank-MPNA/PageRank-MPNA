@@ -5,22 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <cmocka.h>
 
 #define MAX_ITERATIONS 100000
-struct CSB
-{
-    float *data;
-    int *rowind;
-    int *coldind;
-    struct CSB *next;
-};
 
-struct Matrix
-{
-    struct CSB *first;
-    int size_block;
-};
 
 typedef struct csr_vector_s
 {
@@ -30,7 +17,6 @@ typedef struct csr_vector_s
     int nb;
 } csr_vector_t;
 
-struct Matrix *to_CSB(double **A, int size, int process);
 
 int read_sparse_from_file(const char *filename, csr_vector_t *A);
 

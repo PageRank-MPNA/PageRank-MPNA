@@ -45,7 +45,7 @@ int main(int argc, char **argv)
     unsigned long long start_r, end_r;
 
     name_file = (char *)malloc(sizeof(char) * strlen("data/sparse100000.txt") + 1);
-    strcpy(name_file, "data/sparse10000.txt");
+    strcpy(name_file, "data/sparse100000.txt");
     double beta = 0.85;
     double epsilon = 1e-4;
     csr_vector_t *matrice = malloc(sizeof(csr_vector_t));
@@ -66,12 +66,13 @@ int main(int argc, char **argv)
         start_r = rdtsc();
         double *res = PageRank_par(matrice, epsilon, beta, argc, argv);
         clock_gettime(CLOCK_REALTIME, &finish);
-        end_r = start_r - rdtsc();
+        end_r = rdtsc()-start_r;
         sub_timespec(start, finish, &delta);
     }
-    printf("%d.%.9ld\n", (int)delta.tv_sec, delta.tv_nsec);
 
     MPI_Finalize();
+
+    printf("\tTemps = %d%.9ld\n\tRdtsc = %llu\n", (int)delta.tv_sec / 20, delta.tv_nsec /20 ,end_r/20);
 
     /*  printf("result:\n");
       for (int i = 0; i < 6; ++i)
