@@ -16,7 +16,7 @@ int main(int argc, char const *argv[])
 	double *res = PageRank(matrice, epsilon, beta);
 
 	printf("result:\n");
-	for (int i = 0; i < matrice->nb; ++i)
+	for (int i = 0; i < matrice->dim; ++i)
 		printf("%e ", res[i]);
 	printf("\n");
 
