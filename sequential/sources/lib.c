@@ -6,70 +6,59 @@
 
 int read_sparse_from_file(const char *filename, csr_vector_t *A)
 {
-	FILE *f = fopen(filename, "r");
-	if (!f)
-		return perror("Cannot open file"), -1;
+    FILE *f = fopen(filename, "r");
+    if (f == NULL)
+        return perror("Failed: "), -1;
+    int len_val, len_rows, len_cols;
 
-	int len_val, len_rows, len_cols;
+    fscanf(f, "%d %d %d\n", &len_val, &len_rows, &len_cols);
 
-	fscanf(f, "%d %d %d\n", &len_val, &len_rows, &len_cols);
+    A->nb = len_val;
+    A->val = malloc(sizeof(double) * len_val);
+    A->rows = malloc(sizeof(double) * len_rows);
+    A->cols = malloc(sizeof(double) * len_cols);
 
-	A->nb = len_val;
-	A->val = malloc(sizeof(double) * len_val);
-	A->rows = malloc(sizeof(double) * len_rows);
-	A->cols = malloc(sizeof(double) * len_cols);
+    int j = 0;
+    double value;
+    for (int i = 0; i < (len_val); i++)
+    {
+        fscanf(f, "%lf ", &value);
+        A->val[i] = value;
+    }
+    fscanf(f, "\n", &value);
 
-	fseek(f, sizeof(int) + 1, SEEK_SET);
+    for (int i = 0; i < len_rows; i++)
+    {
+        fscanf(f, "%d ", &j);
 
-	int i = 0, j = 0;
-	double value;
-	while(fscanf(f, "%lf ", &value) != EOF)
-	{
-		if(i < len_val)
-		{
-			A->val[j] = value;
-			if(j == len_val - 1){
-				fscanf(f, "\n");
-				j = 0;
-			}
-			else
-				j++;
-		}
-		else if(i < len_val + len_rows)
-		{
-			A->rows[j] = (int) value;
-			if(j == len_rows - 1) {
-				fscanf(f, "\n");
-				j = 0;
-			}
-			else
-				j++;
-		}
-		else {
-			A->cols[j] = (int) value;
-			j++;
-		}
-		i++;
-	}
+        A->rows[i] = j;
+    }
+    fscanf(f, "\n", &value);
 
-	fclose(f);
-	return 0;
+    for (int i = 0; i < len_cols; i++)
+    {
+        fscanf(f, "%d ", &j);
+
+        A->cols[i] = j;
+    }
+
+    fclose(f);
+
+    return 0;
 }
 
 void mult_mat_CSR_vect(const csr_vector_t *A, double *x)
 {
 	int n = A->nb;
-	double *tmp = calloc(n, sizeof(double));
-
-	for (int i = 0; i <= n; ++i)
-	{
-		for (int j = A->rows[i]; j < A->rows[i+1]; ++j)
-			tmp[i] += A->val[j] * x[A->cols[j]];
-	}
+	double sum;
 
 	for (int i = 0; i < n; ++i)
-		x[i] = tmp[i];
-	free(tmp);
+	{
+		sum = 0.0;
+		for (int j = A->rows[i]; j < A->rows[i+1]; ++j)
+			sum += A->val[j] * x[A->cols[j]];
+		x[i] = sum;
+	}
 }
 
 void mult_mat_1D_vect(const double *A, double *x, const int n)
