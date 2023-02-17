@@ -62,8 +62,20 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < nnz; i++)
     {
-        fprintf(fp, "%lf %d %d \n", val[i], I[i] + 1, J[i] + 1);
+        fprintf(fp, "%lf ", val[i]);
     }
+    fprintf(fp, "\n");
+
+    for (int i = 0; i < nnz; i++)
+    {
+        fprintf(fp, "%d ", I[i]);
+    }
+    fprintf(fp, "\n");
+    for (int i = 0; i < nnz; i++)
+    {
+        fprintf(fp, "%d ", J[i]);
+    }
+    fprintf(fp, "\n");
 
     fclose(fp);
 
