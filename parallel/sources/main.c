@@ -20,8 +20,8 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		name_file = (char *)malloc(sizeof(char) * strlen("../test_matrix.csr") + 1);
-		strcpy(name_file, "../test_matrix.csr");
+		name_file = (char *)malloc(sizeof(char) * strlen("data/sparse2.txt") + 1);
+		strcpy(name_file, "data/sparse2.txt");
 	}
 
 	printf("Name = %s\n", name_file);
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 	MPI_Finalize();
 
 	printf("result:\n");
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 4; ++i)
 		printf("%e ", res[i]);
 	printf("\n");
 

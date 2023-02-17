@@ -109,11 +109,6 @@ int main(int argc, char **argv)
     }
     fprintf(fp, "%d %d %d\n", nnz, row, col);
 
-    for (int i = 0; i < nnz; i++)
-    {
-        fprintf(fp, "%lf ", val[i]);
-    }
-    fprintf(fp, "\n");
 
     for (int i = 0; i < row+1; i++)
     {
@@ -126,6 +121,11 @@ int main(int argc, char **argv)
     }
     fprintf(fp, "\n");
 
+    for (int i = 0; i < nnz; i++)
+    {
+        fprintf(fp, "%lf ", val[i]);
+    }
+    fprintf(fp, "\n");
     fclose(fp);
 
     free(I);

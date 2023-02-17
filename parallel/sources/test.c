@@ -43,7 +43,7 @@ static void test_mult_mat_CSR_vect()
     if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, x, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
         printf("Erreur all gather \n");
 
-    double res[6] = {-1.000000, -0.000000, -0.333333, -0.000000, -1.000000, -0.000000};
+    double res[4] = {-1.000000, -1.333333e+00, -1.333333e+00, -0.333333e+00};
 
     if (rank == 0)
         for (int i = start; i < end; ++i)
@@ -56,7 +56,7 @@ static void test_mult_mat_CSR_vect()
     if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, x, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
         printf("Erreur all gather \n");
 
-    double res2[6] = {2.000000, 0.000000, 0.666667, 0.000000, 2.000000, 0.000000};
+    double res2[4] = {2.000000e+00, 2.666667e+00, 2.666667e+00, 0.666667e+00};
 
     if (rank == 0)
         for (int i = start; i < end; ++i)
@@ -76,7 +76,7 @@ static void test_mult_mat_CSR_vect()
 static void test_pagerank()
 {
     int rank, nranks, nlocal;
-    n = matrice->nb;
+    n = matrice->dim;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nranks);
@@ -84,16 +84,16 @@ static void test_pagerank()
     nlocal = n / nranks;
 
     double *res = PageRank_par(matrice, epsilon, beta, argc_g, argv_g);
+    // double *res = PageRank(matrice, epsilon, beta);
+    
     if (MPI_Allgather(MPI_IN_PLACE, nlocal, MPI_DOUBLE, res, nlocal, MPI_DOUBLE, MPI_COMM_WORLD) != MPI_SUCCESS)
         printf("Erreur all gather \n");
     if (rank == 0)
     {
-        assert_float_equal(0.185018, res[0], 1e-6);
-        assert_float_equal(0.060508, res[1], 1e-6);
-        assert_float_equal(0.187391, res[2], 1e-6);
-        assert_float_equal(0.060508, res[3], 1e-6);
-        assert_float_equal(0.446065, res[4], 1e-6);
-        assert_float_equal(0.060508, res[5], 1e-6);
+        assert_float_equal(0.091414e+00, res[0], 1e-6);
+        assert_float_equal(0.422593e+00, res[1], 1e-6);
+        assert_float_equal(0.422593e+00, res[2], 1e-6);
+        assert_float_equal(0.063401e+00, res[3], 1e-6);
     }
 }
 

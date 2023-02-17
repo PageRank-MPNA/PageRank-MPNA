@@ -17,9 +17,6 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A)
     A->rows = malloc(sizeof(int) * (A->dim+1));
     A->cols = malloc(sizeof(int) * A->nb);
 
-    for (int i = 0; i < A->nb; i++)
-        fscanf(f, "%lf ", &(A->val[i]));
-    fscanf(f, "\n", &buf);
 
     for (int i = 0; i < A->dim+1; i++)
         fscanf(f, "%d ", &(A->rows[i]));
@@ -27,6 +24,11 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A)
 
     for (int i = 0; i < A->nb; i++)
         fscanf(f, "%d ", &(A->cols[i]));
+    fscanf(f, "\n", &buf);
+
+    for (int i = 0; i < A->nb; i++)
+        fscanf(f, "%lf ", &(A->val[i]));
+    fscanf(f, "\n", &buf);
 
     fclose(f);
 

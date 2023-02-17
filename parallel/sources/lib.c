@@ -15,17 +15,17 @@ int read_sparse_from_file(const char *filename, csr_vector_t *A)
     A->rows = malloc(sizeof(int) * (A->dim+1));
     A->cols = malloc(sizeof(int) * A->nb);
 
-    for (int i = 0; i < A->nb; i++)
-        fscanf(f, "%lf ", &(A->val[i]));
-    fscanf(f, "\n", &buf);
-
     for (int i = 0; i < A->dim+1; i++)
         fscanf(f, "%d ", &(A->rows[i]));
     fscanf(f, "\n", &buf);
 
     for (int i = 0; i < A->nb; i++)
         fscanf(f, "%d ", &(A->cols[i]));
+    fscanf(f, "\n", &buf);
 
+    for (int i = 0; i < A->nb; i++)
+        fscanf(f, "%lf ", &(A->val[i]));
+    
     fclose(f);
 
     return 0;
@@ -52,7 +52,7 @@ void mult_mat_CSR_vect_par(const csr_vector_t *A, double *x, const int n, unsign
 
 #pragma omp parallel for
     for (int i = start; i < end; ++i)
-        for (int j = A->rows[i]; j < A->rows[i + 1] && j < n; ++j)
+        for (int j = A->rows[i]; j < A->rows[i + 1]/* && j < n*/; ++j)
             tmp[i - start] += A->val[j] * x[A->cols[j]];
 
 #pragma omp parallel for
@@ -112,6 +112,9 @@ double *PageRank_par(csr_vector_t *A, const double epsilon, const double beta, i
     {
         // Compute multiplication matrix-vector
 
+        // for (int i = 0; i < n; ++i)
+        //  printf("%lf ", x[i]);
+        // printf("\n");
         mult_mat_CSR_vect_par(A, x, n, start, end);
 
         // Compute teleportation
@@ -195,6 +198,9 @@ double *PageRank(csr_vector_t *A, const double epsilon, const double beta)
         i++;
 
         // Compute multiplication matrix-vector
+        // for (int i = 0; i < n; ++i)
+        //  printf("%lf ", x[i]);
+        // printf("\n");
         mult_mat_CSR_vect(A, x, n);
 
         // Compute teleportations
