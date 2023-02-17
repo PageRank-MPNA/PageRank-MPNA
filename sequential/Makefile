@@ -14,7 +14,7 @@ bench: $(SRC)/bench2.c
 	$(CC) -g -c $< -o $(BIN)/$@.o 
 	$(CC) -g -o $(BIN)/$@ ./$(BIN)/$@.o ./$(BIN)/main.o -lm -fopenmp
 	rm -f lib.o test.o
-	./$(BIN)/$@ /gpfs/users/m2chps-17/PageRank-MPNA/sequential/matx
+	./$(BIN)/$@ /gpfs/users/m2chps-17/PageRank-MPNA/sequential/data
 
 main: $(SRC)/lib.c
 	$(CC) -g -c $< -o $(BIN)/$@.o
